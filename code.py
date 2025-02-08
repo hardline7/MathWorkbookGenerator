@@ -428,67 +428,59 @@ def create_math_workbook():
         if not setup_fonts():
             logger.error("폰트 설정 실패로 PDF 생성을 중단합니다.")
             return False
-        
-        categories = [
-            ("한자리 수 + 한자리 수 덧셈", generate_addition_problems(1, 9, 1, 9, 10)),
-            ("한자리 수 + 두자리 수 덧셈", generate_addition_problems(1, 9, 10, 20, 10)),
-            ("두자리 수 + 두자리 수 덧셈", generate_addition_problems(10, 20, 10, 20, 10)),
-            ("한자리 수 - 한자리 수 뺄셈", generate_subtraction_problems(1, 9, 1, 9, 10)),
-            ("두자리 수 - 한자리 수 뺄셈", generate_subtraction_problems(10, 99, 1, 9, 10)),
-            ("두자리 수 - 두자리 수 뺄셈", generate_subtraction_problems(10, 99, 10, 99, 10))
-        ]
 
         c = canvas.Canvas(pdf_path, pagesize=A4)
         width, height = A4
-
-        # 여백 설정
-        margin = 50  # 여백 값 추가
 
         # 도장 수집판 페이지 생성
         draw_stamp_collection(c, width, height)
         c.showPage()
 
-        # 각 카테고리별로 10문제씩 생성
-        current_page = 1  # 페이지 번호를 1부터 시작
-        
+        current_page = 1  # 페이지 번호
+
         logger.info("PDF 생성을 시작합니다...")
-        
-        # 각 카테고리를 10번씩 반복 (총 60페이지)
-        for repeat in range(10):  # 10번 반복
-            for category_index, (category, problems) in enumerate(categories):
+
+        # 10번 반복하며 문제 생성
+        for repeat in range(10):
+            for category_index, (category, problem_generator) in enumerate([
+                ("한자리 수 + 한자리 수 덧셈", lambda: generate_addition_problems(1, 9, 1, 9, 10)),
+                ("한자리 수 + 두자리 수 덧셈", lambda: generate_addition_problems(1, 9, 10, 20, 10)),
+                ("두자리 수 + 두자리 수 덧셈", lambda: generate_addition_problems(10, 20, 10, 20, 10)),
+                ("한자리 수 - 한자리 수 뺄셈", lambda: generate_subtraction_problems(1, 9, 1, 9, 10)),
+                ("두자리 수 - 한자리 수 뺄셈", lambda: generate_subtraction_problems(10, 99, 1, 9, 10)),
+                ("두자리 수 - 두자리 수 뺄셈", lambda: generate_subtraction_problems(10, 99, 10, 99, 10))
+            ]):
+                problems = problem_generator()  # 매 반복마다 새로운 문제 생성
+
                 logger.info(f"페이지 {current_page} 작성 중...")
-                
+
                 # 제목
                 c.setFillColorRGB(0, 0, 0)
                 draw_text(c, f"📖 {category}", width/2, height - 80, font_name, 20)
-                
+
                 # 문제 배치
                 y_position = height - 150
-                
-                # 각 페이지당 10문제
-                for i in range(10):
-                    problem_idx = i
-                    if problem_idx < len(problems):
-                        problem_text = f"{i + 1}. {problems[problem_idx]}"
-                        draw_text(c, problem_text, margin + 50, y_position, font_name, 16, center=False)
-                        y_position -= 50
+                for i, problem in enumerate(problems):
+                    problem_text = f"{i + 1}. {problem}"
+                    draw_text(c, problem_text, 50, y_position, font_name, 16, center=False)
+                    y_position -= 50
 
-                # 쉬어가는 퀴즈
+                # 쉬어가는 퀴즈 추가
                 if y_position > 150:
                     y_position -= 30
                     quiz = random.choice(quiz_questions)
                     y_position = draw_quiz_box(c, width, y_position, quiz)
-                
+
                 # 도장 찍기 알림 추가
                 add_stamp_reminder(c, width, 40)
-                
-                # 페이지 번호 (1부터 60까지 순차적으로)
+
+                # 페이지 번호
                 c.setFillColorRGB(0.3, 0.3, 0.3)
                 draw_text(c, f"{current_page}/60", width - 50, 30, font_name, 12)
-                
+
                 c.showPage()
                 current_page += 1  # 페이지 번호 증가
-                
+
             logger.info(f"반복 {repeat + 1}/10 완료")
 
         c.save()
@@ -498,6 +490,7 @@ def create_math_workbook():
     except Exception as e:
         logger.error(f"PDF 생성 중 오류 발생: {e}", exc_info=True)
         return False
+
 
 
 
